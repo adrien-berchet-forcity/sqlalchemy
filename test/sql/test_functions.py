@@ -219,6 +219,20 @@ class CompileTest(fixtures.TestBase, AssertsCompiledSQL):
         class myfunc(GenericFunction):
             __return_type__ = DateTime
 
+        with pytest.raises(AssertionError):
+            assert isinstance(func.MyFunc().type, DateTime)
+        with pytest.raises(AssertionError):
+            assert isinstance(func.mYfUnC().type, DateTime)
+        assert isinstance(func.myfunc().type, DateTime)
+
+    def test_custom_legacy_type_case_insensitive(self):
+        # in case someone was using this system
+        class MyFunc(GenericFunction):
+            __return_type__ = DateTime
+            case_insensitive = True
+
+        assert isinstance(func.MyFunc().type, DateTime)
+        assert isinstance(func.mYfUnC().type, DateTime)
         assert isinstance(func.myfunc().type, DateTime)
 
     def test_custom_w_custom_name(self):
@@ -280,6 +294,8 @@ class CompileTest(fixtures.TestBase, AssertsCompiledSQL):
         self.assert_compile(func.buf3(), "BufferThree()")
         self.assert_compile(func.Buf4(), "BufferFour()")
         self.assert_compile(func.BuF4(), "BufferFour()")
+        self.assert_compile(func.bUf4(), "BufferFour()")
+        self.assert_compile(func.bUf4_(), "BufferFour()")
         self.assert_compile(func.buf4(), "BufferFour()")
 
         class geobufferfour(GenericFunction):
