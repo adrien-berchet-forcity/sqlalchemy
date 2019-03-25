@@ -451,11 +451,8 @@ class _FunctionGenerator(object):
             package = None
 
         if package is not None:
-            if fname in _registry[package]:
-                func = _registry[package].get(fname)
-            else:
-                func = _registry[package].get(
-                    _case_insensitive_functions[package].get(fname.lower()))
+            func = _registry[package].get(fname) or _registry[package].get(
+                _case_insensitive_functions[package].get(fname.lower()))
             if func is not None:
                 return func(*c, **o)
 
