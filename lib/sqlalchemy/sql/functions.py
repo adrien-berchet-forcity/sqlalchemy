@@ -58,6 +58,10 @@ def register_function(identifier, fn, package="_default",
                       "going to be overriden.".format(identifier))
     reg[identifier] = fn
     if case_insensitive:
+        if identifier.lower() in _case_insensitive_functions[package]:
+            warnings.warn("The GenericFunction '{}' is already registered and "
+                          "is going to be overriden.".format(
+                              identifier.lower()))
         _case_insensitive_functions[package][identifier.lower()] = identifier
     elif identifier.lower() in _case_insensitive_functions[package]:
         del _case_insensitive_functions[package][identifier.lower()]

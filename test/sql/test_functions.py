@@ -1,6 +1,7 @@
 import datetime
 import decimal
 import pytest
+import warnings
 
 from sqlalchemy import ARRAY
 from sqlalchemy import bindparam
@@ -298,17 +299,47 @@ class CompileTest(fixtures.TestBase, AssertsCompiledSQL):
         self.assert_compile(func.bUf4_(), "BufferFour()")
         self.assert_compile(func.buf4(), "BufferFour()")
 
-        class geobufferfour(GenericFunction):
-            type = Integer
-            name = "BufferFour"
-            identifier = "Buf4"
-            case_insensitive = False
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+
+            class geobufferfour(GenericFunction):
+                type = Integer
+                name = "BufferFour"
+                identifier = "Buf4"
+                case_insensitive = False
+
+            assert len(w) == 1
+            assert issubclass(w[-1].category, UserWarning)
+            assert "GenericFunction" in str(w[-1].message)
+            assert "Buf4" in str(w[-1].message)
 
         self.assert_compile(func.Buf4(), "BufferFour()")
         with pytest.raises(AssertionError):
             self.assert_compile(func.BuF4(), "BufferFour()")
         with pytest.raises(AssertionError):
             self.assert_compile(func.buf4(), "BufferFour()")
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+
+            class geobufferfive_no_warn(GenericFunction):
+                type = Integer
+                name = "BufferFive"
+                identifier = "Buf5"
+                case_insensitive = True
+
+            class geobufferfive_warn(GenericFunction):
+                type = Integer
+                name = "BufferFive"
+                identifier = "Buf5"
+                case_insensitive = True
+
+            assert len(w) == 2
+            for i in w:
+                assert issubclass(i.category, UserWarning)
+                assert "GenericFunction" in str(i.message)
+            assert "Buf5" in str(w[0].message)
+            assert "buf5" in str(w[1].message)
 
     def test_custom_args(self):
         class myfunc(GenericFunction):
