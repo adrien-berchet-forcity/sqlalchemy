@@ -230,7 +230,7 @@ class CompileTest(fixtures.TestBase, AssertsCompiledSQL):
         # in case someone was using this system
         class MyFunc(GenericFunction):
             __return_type__ = DateTime
-            case_insensitive = True
+            case_sensitive = False
 
         assert isinstance(func.MyFunc().type, DateTime)
         assert isinstance(func.mYfUnC().type, DateTime)
@@ -288,7 +288,7 @@ class CompileTest(fixtures.TestBase, AssertsCompiledSQL):
             type = Integer
             name = "BufferFour"
             identifier = "Buf4"
-            case_insensitive = True
+            case_sensitive = False
 
         self.assert_compile(func.geo.buf1(), "BufferOne()")
         self.assert_compile(func.buf2(), "BufferTwo()")
@@ -306,7 +306,7 @@ class CompileTest(fixtures.TestBase, AssertsCompiledSQL):
                 type = Integer
                 name = "BufferFour"
                 identifier = "Buf4"
-                case_insensitive = False
+                case_sensitive = True
 
             assert len(w) == 1
             assert issubclass(w[-1].category, UserWarning)
@@ -326,13 +326,13 @@ class CompileTest(fixtures.TestBase, AssertsCompiledSQL):
                 type = Integer
                 name = "BufferFive"
                 identifier = "Buf5"
-                case_insensitive = True
+                case_sensitive = False
 
             class geobufferfive_warn(GenericFunction):
                 type = Integer
                 name = "BufferFive"
                 identifier = "Buf5"
-                case_insensitive = True
+                case_sensitive = False
 
             assert len(w) == 2
             for i in w:
