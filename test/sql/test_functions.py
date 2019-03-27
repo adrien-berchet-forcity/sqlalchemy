@@ -33,6 +33,7 @@ from sqlalchemy.sql import table
 from sqlalchemy.sql.compiler import BIND_TEMPLATES
 from sqlalchemy.sql.functions import FunctionElement
 from sqlalchemy.sql.functions import GenericFunction
+from sqlalchemy.sql.sqltypes import NullType
 from sqlalchemy.testing import assert_raises
 from sqlalchemy.testing import assert_raises_message
 from sqlalchemy.testing import AssertsCompiledSQL
@@ -56,7 +57,7 @@ class CompileTest(fixtures.TestBase, AssertsCompiledSQL):
 
     def tear_down(self):
         functions._registry.clear()
-        functions._case_insensitive_functions.clear()
+        functions._case_sensitive_functions.clear()
 
     def test_compile(self):
         for dialect in all_dialects(exclude=("sybase",)):
@@ -219,21 +220,46 @@ class CompileTest(fixtures.TestBase, AssertsCompiledSQL):
         class myfunc(GenericFunction):
             __return_type__ = DateTime
 
-        with pytest.raises(AssertionError):
-            assert isinstance(func.MyFunc().type, DateTime)
-        with pytest.raises(AssertionError):
-            assert isinstance(func.mYfUnC().type, DateTime)
         assert isinstance(func.myfunc().type, DateTime)
 
-    def test_custom_legacy_type_case_insensitive(self):
-        # in case someone was using this system
-        class MyFunc(GenericFunction):
+    def test_replace_function(self):
+
+        class replacable_func(GenericFunction):
+            __return_type__ = Integer
+            identifier = 'replacable_func'
+
+        with testing.expect_deprecated():
+            class Replacable_Func(GenericFunction):
+                __return_type__ = DateTime
+                identifier = 'Replacable_Func'
+
+        assert isinstance(func.Replacable_Func().type, DateTime)
+        assert isinstance(func.RePlAcaBlE_fUnC().type, NullType)
+        assert isinstance(func.replacable_func().type, Integer)
+
+        class replacable_func_override(GenericFunction):
             __return_type__ = DateTime
-            case_sensitive = False
+            identifier = 'replacable_func'
 
-        assert isinstance(func.MyFunc().type, DateTime)
-        assert isinstance(func.mYfUnC().type, DateTime)
-        assert isinstance(func.myfunc().type, DateTime)
+        class Replacable_Func_override(GenericFunction):
+            __return_type__ = Integer
+            identifier = 'Replacable_Func'
+
+        assert isinstance(func.Replacable_Func().type, Integer)
+        assert isinstance(func.RePlAcaBlE_fUnC().type, NullType)
+        assert isinstance(func.replacable_func().type, DateTime)
+
+    def test_custom_legacy_case_sensitive(self):
+        # in case someone was using this system
+        with testing.expect_deprecated():
+            class MyFunc(GenericFunction):
+                __return_type__ = Integer
+
+        assert isinstance(func.MyFunc().type, Integer)
+        with pytest.raises(AssertionError):
+            assert isinstance(func.mYfUnC().type, Integer)
+        with pytest.raises(AssertionError):
+            assert isinstance(func.myfunc().type, Integer)
 
     def test_custom_w_custom_name(self):
         class myfunc(GenericFunction):
@@ -287,7 +313,6 @@ class CompileTest(fixtures.TestBase, AssertsCompiledSQL):
             type = Integer
             name = "BufferFour"
             identifier = "Buf4"
-            case_sensitive = False
 
         self.assert_compile(func.geo.buf1(), "BufferOne()")
         self.assert_compile(func.buf2(), "BufferTwo()")
@@ -298,17 +323,21 @@ class CompileTest(fixtures.TestBase, AssertsCompiledSQL):
         self.assert_compile(func.bUf4_(), "BufferFour()")
         self.assert_compile(func.buf4(), "BufferFour()")
 
-        class geobufferfour(GenericFunction):
-            type = Integer
-            name = "BufferFour"
-            identifier = "Buf4"
-            case_sensitive = True
+        with testing.expect_deprecated():
+            class geobufferfour_lowercase(GenericFunction):
+                type = Integer
+                name = "BufferFour_lowercase"
+                identifier = "buf4"
+
+        with testing.expect_deprecated():
+            class geobufferfour_random_case(GenericFunction):
+                type = Integer
+                name = "BuFferFouR"
+                identifier = "BuF4"
 
         self.assert_compile(func.Buf4(), "BufferFour()")
-        with pytest.raises(AssertionError):
-            self.assert_compile(func.BuF4(), "BufferFour()")
-        with pytest.raises(AssertionError):
-            self.assert_compile(func.buf4(), "BufferFour()")
+        self.assert_compile(func.BuF4(), "BuFferFouR()")
+        self.assert_compile(func.buf4(), "BufferFour_lowercase()")
 
     def test_custom_args(self):
         class myfunc(GenericFunction):
